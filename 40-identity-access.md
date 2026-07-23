@@ -7,7 +7,7 @@
 **This describes code that exists**, unlike the 30-series study of a different codebase. It is updated
 as each slice lands.
 
-**Status: slice 1 of 12 complete.** Staff can sign in and be recognised. Nothing else works yet.
+**Status: slices 1-2 of 12 complete.** Staff can sign in, and routes can be gated on permissions.
 
 ---
 
@@ -25,26 +25,46 @@ rather than `Staff` and `Agent`.
 
 | Type | Signature | Use it to |
 |---|---|---|
-| `Principal` | `record(UUID uid, PrincipalType type)` | know who is acting |
+| `Principal` | `record(uid, type, tenancy, permissions)` | know who is acting |
 | `PrincipalType` | `STAFF` | branch on the kind of actor |
 | `PrincipalContext` | `Principal require()` · `Optional<Principal> current()` | obtain the acting principal |
+| `StaffTenancy` | `ROOT · ADMIN · OPERATOR · PARTNER` | know which organisation they belong to |
+| `Permissions` | `DOMAIN.ACTION` constants | name a permission on a route |
+| `PermissionGuard` | the bean `@perm` | gate a route |
 
 ```java
-// in any module that declares a dependency on identity-access
+// who is acting
 Principal actor = principalContext.require();   // throws 401 if unauthenticated
+
+// gate a route - concatenate the constant, never write the literal
+@PreAuthorize("@perm.has('" + Permissions.ROLE_GRANT + "')")
+public ApiResponse<Void> grant(...) { ... }
 ```
 
-That is the entire published surface. **No permission checking and no operator scope yet** — those are
-slices 2 and 5, and until they land a module cannot ask "may they" or "whose rows", only "who".
+**No operator scope yet** — that is slice 5. Until it lands a module can ask *who* and *what may they
+do*, but not *whose rows*: a read that should be limited to one operator's data cannot be limited yet.
 
 `Principal` carries no `Long` id, and never will: the numeric key does not cross a module boundary.
 
+**The permissions on it are a snapshot.** They are resolved at sign-in and carried in the token, so a role
+revoked one minute later stays effective until the token expires. That is the trade for not querying the
+database on every request, and it is why the lifetime is short. Where a change must take effect
+immediately the lever is session revocation — a later slice — not revoking the role.
+
 ## The doors
 
-| Method | Path | Auth | Returns |
+| Method | Path | Gate | Returns |
 |---|---|---|---|
 | `POST` | `/api/admin/v1/auth/login` | public | token, expiry, display name |
 | `GET` | `/api/admin/v1/auth/me` | bearer | the signed-in account |
+| `GET` | `/api/admin/v1/roles` | `ROLE.READ` | the role catalog |
+| `GET` | `/api/admin/v1/permissions` | `PERMISSION.READ` | the permission catalog |
+| `POST` | `/api/admin/v1/staff/uid/{uid}/roles` | `ROLE.GRANT` | — |
+| `DELETE` | `/api/admin/v1/staff/uid/{uid}/roles/{code}` | `ROLE.REVOKE` | — |
+
+Grant and revoke are both **idempotent**: granting a role already held, or revoking one not held, succeeds
+and changes nothing. A retried request must not be an error a caller can do nothing about, and during an
+incident an error for "they already did not have it" is noise at the worst moment.
 
 Public means *presents its own credential*. Everything else is `authenticated()` by default, so a route
 added tomorrow is protected by omission rather than by someone remembering.
@@ -57,6 +77,14 @@ added tomorrow is protected by omission rather than by someone remembering.
 | `AUTH.ACCOUNT_LOCKED` | 423 | Too many consecutive failures |
 | `AUTH.PASSWORD_CHANGE_REQUIRED` | 409 | Correct password, but it must be rotated. **No token issued** |
 | `AUTH.NOT_AUTHENTICATED` | 401 | No usable token on a protected route |
+| `AUTH.STAFF_NOT_FOUND` | 404 | No such staff account |
+| `AUTH.ROLE_NOT_FOUND` | 404 | No such role code |
+| `AUTH.ROLE_NOT_GRANTABLE` | 409 | The role is archived, or is for a different class of staff |
+| `COMMON.FORBIDDEN` | 403 | Authenticated, but lacks the permission |
+
+The administration codes are freely distinguishable, unlike the sign-in ones: the caller has proved who
+they are and holds the permission to administer accounts, so a precise message discloses nothing they
+could not discover through the surface they already hold.
 
 **One code covering three causes is the point, not laziness.** If an unknown username and a wrong
 password answered differently, the sign-in endpoint would be a free tool for discovering which accounts
@@ -98,6 +126,19 @@ These are behaviours, not preferences. Each has a test.
 5. **A configuration may only be switched off if nothing would quietly take its place.** Security has a
    framework default; persistence does not. Gating the filter chain off once produced a context where
    Boot's default chain served every route behind a generated password.
+6. **`@EnableMethodSecurity` stays beside the filter chain.** Absent, every `@PreAuthorize` in the reactor
+   is inert - present, reviewed, and doing nothing - and no test fails, because a test expecting 200 still
+   gets one.
+7. **A permission denial is rendered 403 by an explicit handler.** Method security throws from *inside* the
+   controller invocation, so the chain's access-denied handler never sees it. Without a dedicated handler
+   every refusal becomes a 500 with a stack trace at ERROR, and "you may not do that" is indistinguishable
+   from an outage.
+8. **`hasAuthority(...)` must never appear anywhere in the reactor.** ROOT carries no authorities, so the
+   first bare expression merged locks the break-glass identity out of the system it exists to rescue.
+9. **Archived roles are filtered at resolution**, not merely blocked at grant time. Otherwise archiving
+   withdraws nothing from existing holders and the role keeps conferring everything it ever did.
+10. **Grants are listed explicitly, never by pattern.** A role defined as "everything matching `%.READ`"
+    turns a rename into a privilege escalation.
 
 ## Configuration
 
@@ -129,11 +170,25 @@ IDENTITY_BOOTSTRAP_ROOT_PASSWORD=... mvn -pl services/bus-core -am spring-boot:r
 Integration tests need Docker; they start their own `postgres:18-alpine` and never touch a shared
 instance.
 
+## The catalog
+
+Permission codes are declared in `Permissions` **and** seeded by `R__seed_rbac.sql`, and a test asserts the
+two agree in both directions.
+
+That duplication is deliberate. **A code declared but not seeded refuses everyone, forever, and silently**
+- the permission does not exist to be granted, so no role can hold it. No integration test finds it
+either, because a test runs as an administrator granted every *seeded* code, or as ROOT which bypasses the
+check. The catalog test is the only thing that catches it.
+
+Seeded roles: `PLATFORM_ADMIN` (all five codes) and `SUPPORT` (the three read codes). **ROOT holds no role
+and appears nowhere in the seed** - its authority is a single branch in the guard, and seeding it a role
+would make that branch look redundant and invite its removal.
+
 ## What is left
 
-Slice 1 of 12. Next: **RBAC** (slice 2), which must land before any gated route exists anywhere — a
-permission that is annotated but not seeded refuses everyone but ROOT, forever, and no integration test
-catches it.
+Slices 1-2 of 12. Next: **the audience gate** (slice 3), which distinguishes staff routes from agent routes
+at the door. It will appear to do nothing, because there is only one audience - which is exactly why it
+lands now rather than being retrofitted once there are two.
 
-`OperatorScope` arrives in slice 5, and that is the point at which the other 16 modules are unblocked.
-Slices 6–12 serve this module's own users and block nobody.
+`OperatorScope` arrives in **slice 5**, and that is the point at which the other 16 modules are unblocked -
+not slice 12. Slices 6-12 serve this module's own users and block nobody.

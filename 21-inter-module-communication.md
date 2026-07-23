@@ -128,9 +128,25 @@ types with no module grouping, where changing one response field touches the mod
 Centralise nothing and two modules quietly grow near-identical view types that drift. The rule above trades
 a small, deliberate move at the moment of second use for avoiding both.
 
-Permission constants live in `api-contracts`, not in `identity-access`, specifically so that gating a route
-requires no dependency on `identity-access`. The code is a string, and the guard is reached by SpEL bean
-*name* — which is how every module gates routes without importing the identity module at all.
+**Permission constants are the exception, and they live in `identity-access`.** The obvious placement is
+`api-contracts`, on the reasoning that gating a route should not require depending on the identity module.
+That reasoning does not survive contact with the DAG: **all 16 modules that gate routes already depend on
+`identity-access`**, because they also resolve the acting principal. The dependency exists either way, so
+that placement buys nothing.
+
+What it would cost is real. The constants must agree exactly with the SQL seed that inserts them, and the
+seed lives in `identity-access`. Split them across two modules and the test holding them to each other has
+to reach across a boundary — for an invariant whose failure is silent: a code declared but never seeded
+refuses *everyone*, forever, and no other test catches it.
+
+The *guard* is still reached by SpEL bean name, so no module compiles against how the decision is made:
+
+```java
+@PreAuthorize("@perm.has('" + Permissions.ROLE_GRANT + "')")
+```
+
+**Concatenate the constant; never write the literal.** SpEL is not compiled, so a typo inside the quotes is
+not an error — it is a permission nobody holds, which means the route silently refuses everyone forever.
 
 ### One database, separate tables
 
