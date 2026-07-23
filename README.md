@@ -20,6 +20,7 @@ README.md          index — links everywhere, nothing links here
       ↑
 10-module-layout.md      how one module is laid out
 11-naming.md             what things are called
+12-api-conventions.md    the response envelope and error codes
       ↑
 20-module-catalog.md               the 27 modules and the dependency DAG
 21-inter-module-communication.md   how modules reach each other
@@ -49,6 +50,7 @@ If you are an agent working on `bus-core-api`: treat 00–29 as instructions, an
 | [00-glossary.md](00-glossary.md) | The vocabulary. Read first; everything else assumes it. |
 | [10-module-layout.md](10-module-layout.md) | The directory shape of a module, and what may live where. |
 | [11-naming.md](11-naming.md) | Module, package, type, column, and permission naming. |
+| [12-api-conventions.md](12-api-conventions.md) | The response envelope, error codes, validation errors, pagination. |
 | [20-module-catalog.md](20-module-catalog.md) | What the 27 modules are, the DAG, and how to add one. |
 | [21-inter-module-communication.md](21-inter-module-communication.md) | The four ways to cross a module boundary, and when each is right. |
 | [22-implementation-plan.md](22-implementation-plan.md) | The build order, derived from the DAG: waves, critical path, phasing. |

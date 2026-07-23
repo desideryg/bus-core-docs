@@ -6,7 +6,7 @@
 Everything runs in **one process**. "Inter-module" means an in-process call across a compile-time boundary,
 not a network hop — unless the event bus is involved.
 
-## The four channels
+## The channels
 
 | Channel | Pom edge | Coupling | Reach for it when |
 |---|---|---|---|
@@ -14,6 +14,11 @@ not a network hop — unless the event bus is involved.
 | **② Inbound port** | B → A | compile arrow reversed | The natural edge would close a cycle, or let a core module name an adapter. |
 | **③ uid handle** | none | none | You only need to *store* a reference. |
 | **④ Outbox event** | none | none at compile time | Something happened, others may care, and you must not block on them. |
+| **⑤ Pass-through** | none (A→B, A→C only) | none between B and C | B must **enforce** a value it must not be allowed to **decide**. |
+| **⑥ Snapshot at write** | none, after the write | none | The artefact is a *document*, not a screen. |
+
+⑤ and ⑥ are the two ways to end up with **no edge at all**, and they are worth reaching for before ① —
+the cheapest dependency is the one you did not take.
 
 ```
       ┌───────────────────────── MODULE A ─────────────────────────┐
@@ -103,8 +108,25 @@ Both are depended on by everything, so what goes in each matters:
 
 | Module | Holds | Membership test |
 |---|---|---|
-| `api-contracts` | error catalog, response envelopes, permission constants, wire enums, paging | *Does it appear on the wire?* |
+| `api-contracts` | error catalog, response envelopes, permission constants, wire enums, paging | *Does it appear on the wire **and** is it needed by more than one module?* |
 | `shared` | base entity, audit, translation, money, messaging/outbox, roles | *Is it machinery every module needs?* |
+
+### Start local, promote on second use
+
+**A module's own request and response types live in its `internal/domain/dto`, not here.** Appearing on the
+wire is not sufficient — the test is whether a *second* module needs the type.
+
+Promote to `api-contracts` only when a real second consumer appears, and move it in the commit that
+introduces that consumer. Until then it stays where it is owned.
+
+The reason is blast radius: `api-contracts` is depended on by 25 modules, so every type placed here turns a
+one-module change into a full-reactor rebuild and a shared review surface. A type used by exactly one module
+pays that cost and buys nothing.
+
+Both directions of the mistake are real. Centralise everything and you get a flat namespace of hundreds of
+types with no module grouping, where changing one response field touches the module everything depends on.
+Centralise nothing and two modules quietly grow near-identical view types that drift. The rule above trades
+a small, deliberate move at the moment of second use for avoiding both.
 
 Permission constants live in `api-contracts`, not in `identity-access`, specifically so that gating a route
 requires no dependency on `identity-access`. The code is a string, and the guard is reached by SpEL bean

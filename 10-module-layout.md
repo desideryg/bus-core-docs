@@ -80,7 +80,7 @@ registered. That is the design working, not a bug.
 | `internal/api/<audience>` | controllers + delegates | Controllers hold no logic — a thin shim over a delegate. Mappings are **relative**; the `/api` prefix comes once from the context path. |
 | `internal/config` | `@Configuration` | The only package the assembler reaches. |
 | `internal/domain/entity` | JPA entities | Changes only alongside a migration. No cross-module foreign keys. |
-| `internal/domain/dto` | wire shapes, projections | Carries data, never authority. Keep separate from entities even when identical — they diverge the first time a column must not be returned. |
+| `internal/domain/dto` | wire shapes, projections | **This is where a module's request and response types live** — not in `api-contracts`, until a second module needs one. Carries data, never authority. Keep separate from entities even when identical: they diverge the first time a column must not be returned. |
 | `internal/domain/enums` | closed sets | Persist the **name**, never the ordinal. Renaming a constant is a migration, not a refactor. |
 | `internal/repository` | repositories | A lookup must match the index that guarantees it — a case-sensitive query against a `lower()` index silently bypasses uniqueness. |
 | `internal/security` | guards, filters, hashers | Hashing follows *how* a secret is used: looked-up → deterministic, verified → adaptive, recomputed → encrypted. |
