@@ -28,6 +28,8 @@ README.md          index — links everywhere, nothing links here
       ↑
 30-reference-identity-access.md    ← STUDY of a DIFFERENT codebase
 31-identity-access-rebuild.md      the plan for building ours
+      ↑
+40-identity-access.md              what our module ACTUALLY provides
 ```
 
 ## Normative vs informative
@@ -36,6 +38,7 @@ README.md          index — links everywhere, nothing links here
 |---|---|---|
 | **00–29** | **Normative.** These are the rules for this project. | `../bus-core-api` |
 | **30–39** | **Informative.** A study of prior art, to learn from. | `../../BUS4/core-bus-api` — **a different codebase** |
+| **40+** | **Normative and live.** What a module actually provides; updated per slice. | `../bus-core-api` |
 
 Documents in the 30s describe an *earlier, separate* implementation. They are here because it solved these
 problems already and its reasoning is worth having. **Nothing in the 30s describes code that exists in this
@@ -56,6 +59,7 @@ If you are an agent working on `bus-core-api`: treat 00–29 as instructions, an
 | [22-implementation-plan.md](22-implementation-plan.md) | The build order, derived from the DAG: waves, critical path, phasing. |
 | [30-reference-identity-access.md](30-reference-identity-access.md) | *(informative)* How the reference implementation built identity and auth. |
 | [31-identity-access-rebuild.md](31-identity-access-rebuild.md) | The slice order for building ours, and the defects not to reproduce. |
+| [40-identity-access.md](40-identity-access.md) | **What identity-access provides today**, and the rules a later slice must not break. |
 
 ## Checking the rule
 
