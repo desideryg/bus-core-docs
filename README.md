@@ -25,6 +25,7 @@ README.md          index — links everywhere, nothing links here
 20-module-catalog.md               the 27 modules and the dependency DAG
 21-inter-module-communication.md   how modules reach each other
 22-implementation-plan.md          the build order derived from the DAG
+23-module-checklist.md             the gates a module passes before it is done
       ↑
 30-reference-identity-access.md    ← STUDY of a DIFFERENT codebase
 31-identity-access-rebuild.md      the plan for building ours
@@ -55,8 +56,9 @@ If you are an agent working on `bus-core-api`: treat 00–29 as instructions, an
 | [11-naming.md](11-naming.md) | Module, package, type, column, and permission naming. |
 | [12-api-conventions.md](12-api-conventions.md) | The response envelope, error codes, validation errors, pagination. |
 | [20-module-catalog.md](20-module-catalog.md) | What the 27 modules are, the DAG, and how to add one. |
-| [21-inter-module-communication.md](21-inter-module-communication.md) | The four ways to cross a module boundary, and when each is right. |
+| [21-inter-module-communication.md](21-inter-module-communication.md) | The six ways to cross a module boundary, when each is right, and a request traced end to end. |
 | [22-implementation-plan.md](22-implementation-plan.md) | The build order, derived from the DAG: waves, critical path, phasing. |
+| [23-module-checklist.md](23-module-checklist.md) | **The gates every module and slice passes before it is called done** — and what makes a partly-built module safe rather than a landmine. |
 | [30-reference-identity-access.md](30-reference-identity-access.md) | *(informative)* How the reference implementation built identity and auth. |
 | [31-identity-access-rebuild.md](31-identity-access-rebuild.md) | The slice order for building ours, and the defects not to reproduce. |
 | [40-identity-access.md](40-identity-access.md) | **What identity-access provides today**, and the rules a later slice must not break. |

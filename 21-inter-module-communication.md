@@ -6,7 +6,7 @@
 Everything runs in **one process**. "Inter-module" means an in-process call across a compile-time boundary,
 not a network hop — unless the event bus is involved.
 
-> **Read the Status column before copying anything.** 25 of the 27 modules are empty skeletons today, so
+> **Read the Status column before copying anything.** 24 of the 27 modules are empty skeletons today, so
 > most of this document is a **contract agreed in advance**, not a description of running code. That is
 > deliberate — the shape is argued once, here, rather than settled by whoever writes `booking` first — but a
 > reader who mistakes an intention for an implementation goes looking for a class nobody wrote. Where a

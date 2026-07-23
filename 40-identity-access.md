@@ -7,8 +7,9 @@
 **This describes code that exists**, unlike the 30-series study of a different codebase. It is updated
 as each slice lands.
 
-**Status: slices 1-5 of 12 complete.** Staff can sign in, routes are gated on permissions and on
-audience, every authentication decision is recorded, and the other 16 modules are unblocked.
+**Status: slices 1-7 of 12 complete.** Staff can sign in and change their own passwords, accounts are
+provisioned and administered, routes are gated on permissions and on audience, agents sign in with a PIN,
+every authentication decision is recorded, and the other 16 modules are unblocked.
 
 ---
 
@@ -382,18 +383,28 @@ seeding it a role would make that branch look redundant and invite its removal.
 
 ## What is left
 
-Slices 1-5 of 12 are done, and **the other 16 modules are unblocked** — `OperatorScope` was the gate, not
+Slices 1-7 of 12 are done, and **the other 16 modules are unblocked** — `OperatorScope` was the gate, not
 slice 12. Everything remaining serves this module's own users and blocks nobody.
 
 | Slice | What it adds |
 |---|---|
-| 6 | Credential lifecycle — set the first password, rotate, forced change, reset |
-| 7 | Agent identity — PIN authentication, and the second audience the gate was built for |
 | 8 | Rate limiting at the door |
 | 9 | Transaction PIN, for value-moving operations |
 | 10 | Multi-factor authentication |
 | 11 | API clients — machine callers that re-prove a key per request and hold no session |
 | 12 | Contract profile |
 
-Slice 6 is the immediate one: accounts are provisioned `PENDING` with no credential, so today an
-administrator can create an account that nobody can ever sign in to.
+**Slice 8 is the immediate one, and it is not optional.** A PIN is six digits, and per-account lockout
+cannot see the horizontal sweep: one guess of `123456` against ten thousand agents locks nobody out, because
+every account records a single failure. That pattern lives *across* accounts and the counter lives *inside*
+one. Until slice 8 puts a limit on attempts per source and an alert on the estate-wide failure rate, this is
+the module's largest exposure — and it is stated here rather than left to be discovered.
+
+### Known gaps, stated
+
+| Gap | Consequence today | Closes in |
+|---|---|---|
+| No agent provisioning surface | agent rows are created by hand; nothing sets or resets a PIN | a later slice |
+| No PIN length policy | six digits is the argument in `AgentCredential`, enforced nowhere, because nothing sets a PIN yet | with provisioning |
+| A reset token returns to the administrator | they could redeem it themselves; the trail records who issued it | when `notification` can deliver it directly |
+| No session revocation | a role revoked mid-token stays effective until it expires | a later slice |
