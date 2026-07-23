@@ -15,6 +15,7 @@ deployable so far.
 |---|---|---|
 | `api-contracts` | *nothing* | The error catalog, the response envelope, permission constants, cross-module wire enums. No framework dependency of any kind, so the same types can back a generated client SDK. |
 | `shared` | `api-contracts` | Cross-cutting kernel: base entity, audit, outbox/messaging, paging, time, translation, logging. |
+| `notification` | `api-contracts` | Outbound-message transport: channel providers, encrypted credentials, dispatch of an already-rendered message. Domain-agnostic — the *content* of a message is composed by whatever module triggers it. |
 
 `shared → api-contracts` is the one edge here, and it exists because **shared must be able to refuse**.
 Paging validation rejects an unusable sort expression, and it does so with the one error model rather than a
@@ -55,7 +56,6 @@ programming mistakes into 400s for callers instead of 500s in the log.
 |---|---|
 | `booking` | Booking lifecycle and idempotent creation. Coordinates; does not decide. |
 | `payment-settlement` | Payment/settlement state and the gateway port the adapter implements. |
-| `notification` | Channel providers, encrypted credentials, dispatch. |
 
 ### Adapters — point inward, nothing depends on them
 
@@ -76,6 +76,7 @@ two disagree in either direction.
 |---|---:|---|
 | `api-contracts` | 0 | — |
 | `shared` | 1 | api-contracts |
+| `notification` | 1 | api-contracts |
 | `identity-access` | 2 | shared, api-contracts |
 | `storage` | 3 | + identity-access |
 | `documents` | 4 | + storage |
@@ -96,7 +97,6 @@ two disagree in either direction.
 | `wallet-ledger` | 5 | + agent, tenancy |
 | `booking` | 12 | + agent, scheduling, fare, seat-inventory, quota, network, tenancy, promotions, customer |
 | `payment-settlement` | 8 | + booking, agent, wallet-ledger, scheduling, promotions |
-| `notification` | 10 | + booking, payment-settlement, wallet-ledger, scheduling, network, tenancy, agent |
 | `payment-gateway-adapter` | 4 | shared, api-contracts, payment-settlement, wallet-ledger |
 | `uts-adapter` | 4 | shared, api-contracts, notification, booking |
 | `fiscal-adapter` | 4 | shared, api-contracts, notification, payment-settlement |
