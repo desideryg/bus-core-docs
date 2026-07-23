@@ -9,12 +9,17 @@ deployable so far.
 
 ## The catalog
 
-### Foundations — depend on nothing
+### Foundations
 
-| Module | Owns |
-|---|---|
-| `shared` | Cross-cutting kernel: base entity, money, messaging/outbox, translation, paging, roles. |
-| `api-contracts` | Shared DTOs, the error catalog, the response envelope, permission constants, wire enums. |
+| Module | Depends on | Owns |
+|---|---|---|
+| `api-contracts` | *nothing* | The error catalog, the response envelope, permission constants, cross-module wire enums. No framework dependency of any kind, so the same types can back a generated client SDK. |
+| `shared` | `api-contracts` | Cross-cutting kernel: base entity, audit, outbox/messaging, paging, time, translation, logging. |
+
+`shared → api-contracts` is the one edge here, and it exists because **shared must be able to refuse**.
+Paging validation rejects an unusable sort expression, and it does so with the one error model rather than a
+JDK exception the web layer would have to blanket-map to 400 — a mapping that would quietly turn ordinary
+programming mistakes into 400s for callers instead of 500s in the log.
 
 ### Tier 1 — identity, storage, and reference data
 
@@ -69,8 +74,8 @@ two disagree in either direction.
 
 | Module | Deps | Declares |
 |---|---:|---|
-| `shared` | 0 | — |
 | `api-contracts` | 0 | — |
+| `shared` | 1 | api-contracts |
 | `identity-access` | 2 | shared, api-contracts |
 | `storage` | 3 | + identity-access |
 | `documents` | 4 | + storage |
